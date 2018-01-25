@@ -1,3 +1,5 @@
+'use strict'
+
 const start = Symbol('start')
 const retry = Symbol('retry')
 const abort = Symbol('abort')
@@ -9,7 +11,7 @@ const consumeValid = Symbol('consumeValid')
 
 // #region Single Task Wrapper
 
-export class TaskCapsule {
+class TaskCapsule {
   // func must be an asynchronized function
   // if it's not
   // why you need task queue?
@@ -118,7 +120,7 @@ class TaskQueue {
   }
 }
 
-export class ParallelQueue extends TaskQueue {
+class ParallelQueue extends TaskQueue {
   constructor({ limit = 5, span = 300, toleration = 3, onFinished }) {
     super({ onFinished })
     this.limitation = limit
@@ -173,7 +175,7 @@ export class ParallelQueue extends TaskQueue {
   }
 }
 
-export class SerialQueue extends TaskQueue {
+class SerialQueue extends TaskQueue {
   constructor({ abortAfterFail = false, toleration = 3, onFinished }) {
     super({ onFinished })
     this.abortAfterFail = abortAfterFail
@@ -223,3 +225,7 @@ export class SerialQueue extends TaskQueue {
 }
 
 // #endregion
+
+exports.TaskCapsule = TaskCapsule
+exports.ParallelQueue = ParallelQueue
+exports.SerialQueue = SerialQueue
