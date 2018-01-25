@@ -1,0 +1,41 @@
+{
+  "name": "task-queue",
+  "version": "1.0.0",
+  "description": "Make some asynchronous tasks run in a parallel/serial model",
+  "main": "./src/index.js",
+  "scripts": {
+    "prepublish": "yarn run lint & yarn run test",
+    "test": "",
+    "lint": "node_modules/.bin/eslint src/**/*.js --fix"
+  },
+  "author": "marsoln",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/marsoln/redis-wrapper/issues"
+  },
+  "homepage": "https://github.com/marsoln/redis-wrapper#readme",
+  "devDependencies": {
+    "babel-core": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-polyfill": "^6.23.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "eslint": "^3.19.0",
+    "eslint-plugin-import": "^2.3.0",
+    "eslint-plugin-jsx-a11y": "^5.0.3"
+  },
+  "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ],
+      "stage-2"
+    ]
+  }
+}

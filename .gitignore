@@ -1,0 +1,11 @@
+# npm packages
+node_modules/
+
+# logs
+*.log
+
+# Mac file
+.DS_STORE
+
+# test file
+test.js
