@@ -1,13 +1,15 @@
-# Asynchronous Tasks Execute Management
+# async-task-manager
 
+> asynchronous tasks execution manager  
+> **support ES6 only**
 
 ### Usage
 
-> support ES6 only
+`npm install --save async-task-manager`
 
 ```javascript
 
-import { TaskCapsule, ParallelQueue } from 'task-queue'
+import { TaskCapsule, ParallelQueue } from 'async-task-manager'
 
 let queue = new ParallelQueue({
   limit: 3, // parallel limitation
