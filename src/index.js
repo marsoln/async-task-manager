@@ -40,9 +40,14 @@ class TaskQueue {
     this.total = 0
     this.succ = 0
     this.fail = 0
-    this.printFinishLog = true
     this.onExecAmount = 0
     this.onFinished = onFinished
+    this.__resolve = null
+    this.__reject = null
+    this.__promise = new Promise((resolve, reject) => {
+      this.__resolve = resolve
+      this.__reject = reject
+    })
   }
 
   add(task) {
@@ -50,17 +55,6 @@ class TaskQueue {
       throw new TypeError('Task must be an instance of type - <TaskCapsule>.')
     }
     this.queue.push(task)
-  }
-
-  getLength() {
-    return this.queue.length
-  }
-
-  getState() {
-    return {
-      onHandle: this.onHandle,
-      done: this.done,
-    }
   }
 
   [prepareToBegin]() {
@@ -72,7 +66,6 @@ class TaskQueue {
       this.succ = 0
       this.fail = 0
       this.onExecAmount = 0
-      this.printFinishLog = true
       return true
     }
     return false
@@ -81,7 +74,7 @@ class TaskQueue {
   [execAmountChange](num) {
     this.onExecAmount += num
     if (this.onExecAmount <= 0 && this.queue.length === 0) {
-      this[finish]()
+      this[finish](true)
     }
   }
 
@@ -93,7 +86,7 @@ class TaskQueue {
       return false
     } else if (this[abort]) {
       console.warn('Tasks abort.')
-      this[finish]()
+      this[finish](false)
       return false
     } else if (this.queue.length === 0) {
       return false
@@ -102,10 +95,14 @@ class TaskQueue {
     }
   }
 
-  [finish]() {
+  [finish](flag) {
     this.onHandle = false
     this.done = true
-    this.printFinishLog = false
+    if (flag && this.__resolve) {
+      this.__resolve.call(this)
+    } else if (this.__reject) {
+      this.__reject.call(this)
+    }
     if (this.onFinished) {
       this.onFinished.call(this)
     }
@@ -161,17 +158,21 @@ class ParallelQueue extends TaskQueue {
   }
 
   consume() {
-    if (this[prepareToBegin]()) {
-      if (this.queue.length > 0) {
-        for (let _i = 0; _i < this.limitation; _i += 1) {
-          this[start]()
+    return new Promise((resolve, reject) => {
+      this.__resolve = resolve
+      this.__reject = reject
+      if (this[prepareToBegin]()) {
+        if (this.queue.length > 0) {
+          for (let _i = 0; _i < this.limitation; _i += 1) {
+            this[start]()
+          }
+        } else {
+          this[execAmountChange](0)
         }
       } else {
-        this[execAmountChange](0)
+        this.__reject(new Error('not able to consume'))
       }
-    } else {
-      console.warn('not able to consume')
-    }
+    })
   }
 }
 
@@ -197,7 +198,7 @@ class SerialQueue extends TaskQueue {
             // retried many times still failed
             this.fail += 1
             if (this.abortAfterFail) {
-              this[finish]()
+              this[finish](false)
               return false
             }
           } else {
@@ -212,15 +213,27 @@ class SerialQueue extends TaskQueue {
   }
 
   consume() {
-    if (this[prepareToBegin]()) {
-      if (this.queue.length > 0) {
-        this[start]()
+    return new Promise((resolve, reject) => {
+      this.__resolve = resolve
+      this.__reject = reject
+      if (this[prepareToBegin]()) {
+        if (this.queue.length > 0) {
+          this[start]()
+        } else {
+          this[execAmountChange](0)
+        }
       } else {
-        this[execAmountChange](0)
+        this.__reject(new Error('not able to consume'))
       }
-    } else {
-      console.warn('not able to consume')
-    }
+    })
+  }
+
+  abort() {
+    this[abort] = true
+  }
+
+  flush() {
+    this.queue = []
   }
 }
 

@@ -6,6 +6,3 @@ node_modules/
 
 # Mac file
 .DS_STORE
-
-# test file
-test.js

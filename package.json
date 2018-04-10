@@ -1,11 +1,11 @@
 {
   "name": "async-task-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Make some asynchronous tasks run in a parallel/serial model",
   "main": "./src/index.js",
   "scripts": {
     "prepublishOnly": "yarn lint",
-    "test": "",
+    "test": "node_modules/.bin/mocha test.js",
     "lint": "node_modules/.bin/eslint src/**/*.js --fix"
   },
   "author": "marsoln",
@@ -16,8 +16,10 @@
   "homepage": "https://github.com/marsoln/async-task-manager#readme",
   "devDependencies": {
     "babel-eslint": "^7.2.3",
+    "chai": "^4.1.2",
     "eslint": "^3.19.0",
     "eslint-plugin-import": "^2.3.0",
-    "eslint-plugin-jsx-a11y": "^5.0.3"
+    "eslint-plugin-jsx-a11y": "^5.0.3",
+    "mocha": "^5.0.5"
   }
 }
