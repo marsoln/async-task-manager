@@ -1,6 +1,6 @@
 {
   "name": "async-task-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Make some asynchronous tasks run in a parallel/serial model",
   "main": "./src/index.js",
   "scripts": {
