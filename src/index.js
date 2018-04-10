@@ -98,7 +98,7 @@ class TaskQueue {
   [finish](flag) {
     this.onHandle = false
     this.done = true
-    if (flag && this.__resolve) {
+    if (flag && this.__resolve && this.succ === this.total) {
       this.__resolve.call(this)
     } else if (this.__reject) {
       this.__reject.call(this)
