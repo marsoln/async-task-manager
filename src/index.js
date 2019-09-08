@@ -34,27 +34,32 @@ class TaskCapsule {
 class TaskQueue {
   constructor({ onFinished }) {
     this.queue = [] // task queue
+    this.errorStack = [] // errors occured while processing
     this[abort] = false // is abort
     this.done = false // has done
     this.onHandle = false // is handlering
     this.total = 0
-    this.succ = 0
-    this.fail = 0
+    this.succeed = 0
+    this.failed = 0
     this.onExecAmount = 0
     this.onFinished = onFinished
     this.__resolve = null
     this.__reject = null
-    this.__promise = new Promise((resolve, reject) => {
-      this.__resolve = resolve
-      this.__reject = reject
-    })
   }
 
+  /**
+   * Add a task to the queue
+   * @param {TaskCapsule|function} task Task to be executed
+   */
   add(task) {
-    if (!(task instanceof TaskCapsule)) {
-      throw new TypeError('Task must be an instance of type - <TaskCapsule>.')
+    if (!(task instanceof TaskCapsule) && typeof task !== 'function') {
+      throw new TypeError('Task must be an instance of type - <TaskCapsule> or a function with a Promise as it\'s return value.')
     }
-    this.queue.push(task)
+    if (task instanceof TaskCapsule) {
+      this.queue.push(task)
+    } else {
+      this.queue.push({ run: task })
+    }
   }
 
   [prepareToBegin]() {
@@ -63,8 +68,8 @@ class TaskQueue {
       this.done = false
       this.onHandle = true
       this.total = this.queue.length
-      this.succ = 0
-      this.fail = 0
+      this.succeed = 0
+      this.failed = 0
       this.onExecAmount = 0
       return true
     }
@@ -98,10 +103,10 @@ class TaskQueue {
   [finish](flag) {
     this.onHandle = false
     this.done = true
-    if (flag && this.__resolve && this.succ === this.total) {
+    if (flag && this.__resolve && this.failed === 0) {
       this.__resolve.call(this)
     } else if (this.__reject) {
-      this.__reject.call(this)
+      this.__reject.call(this, this.errorStack)
     }
     if (this.onFinished) {
       this.onFinished.call(this)
@@ -114,6 +119,7 @@ class TaskQueue {
 
   flush() {
     this.queue = []
+    this.errorStack = []
   }
 }
 
@@ -134,13 +140,14 @@ class ParallelQueue extends TaskQueue {
           .run()
           .then(() => {
             // exec success
-            this.succ += 1
+            this.succeed += 1
             this[execAmountChange](-1)
           })
-          .catch((e) => {
+          .catch((err) => {
             if (task[retry] >= this.toleration) {
               // retried many times still failed
-              this.fail += 1
+              this.failed += 1
+              this.errorStack.push(err)
             } else {
               // failed but retry it
               task[retry] += 1
@@ -170,7 +177,7 @@ class ParallelQueue extends TaskQueue {
           this[execAmountChange](0)
         }
       } else {
-        this.__reject(new Error('not able to consume'))
+        this.__reject(new Error('Unable to consume'))
       }
     })
   }
@@ -189,17 +196,19 @@ class SerialQueue extends TaskQueue {
       let task = this.queue.shift()
       task.run()
         .then(() => {
-          this.succ += 1
+          this.succeed += 1
           this[execAmountChange](-1)
           this[start].call(this)
         })
-        .catch(() => {
+        .catch((err) => {
           if (task[retry] >= this.toleration) {
             // retried many times still failed
-            this.fail += 1
+            this.failed += 1
             if (this.abortAfterFail) {
               this[finish](false)
               return false
+            } else {
+              this.errorStack.push(err)
             }
           } else {
             // failed but retry it
@@ -223,7 +232,7 @@ class SerialQueue extends TaskQueue {
           this[execAmountChange](0)
         }
       } else {
-        this.__reject(new Error('not able to consume'))
+        this.__reject(new Error('Unable to consume'))
       }
     })
   }
@@ -234,6 +243,7 @@ class SerialQueue extends TaskQueue {
 
   flush() {
     this.queue = []
+    this.errorStack = []
   }
 }
 
