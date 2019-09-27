@@ -32,7 +32,7 @@ class TaskCapsule {
 // #region Task Queues
 
 class TaskQueue {
-  constructor({ onFinished }) {
+  constructor() {
     this.queue = [] // task queue
     this.errorStack = [] // errors occured while processing
     this[abort] = false // is abort
@@ -42,7 +42,6 @@ class TaskQueue {
     this.succeed = 0
     this.failed = 0
     this.onExecAmount = 0
-    this.onFinished = onFinished
     this.__resolve = null
     this.__reject = null
   }
@@ -55,10 +54,12 @@ class TaskQueue {
     if (!(task instanceof TaskCapsule) && typeof task !== 'function') {
       throw new TypeError('Task must be an instance of type - <TaskCapsule> or a function with a Promise as it\'s return value.')
     }
+
     if (task instanceof TaskCapsule) {
+      task[retry] = 0
       this.queue.push(task)
     } else {
-      this.queue.push({ run: task })
+      this.queue.push({ run: task, [retry]: 0 })
     }
   }
 
@@ -71,15 +72,17 @@ class TaskQueue {
       this.succeed = 0
       this.failed = 0
       this.onExecAmount = 0
+      this.errorStack = []
       return true
     }
     return false
   }
 
   [execAmountChange](num) {
+    // console.debug(`exec amount changed: ${num}`)
     this.onExecAmount += num
     if (this.onExecAmount <= 0 && this.queue.length === 0) {
-      this[finish](true)
+      this[finish]()
     }
   }
 
@@ -90,8 +93,7 @@ class TaskQueue {
       }
       return false
     } else if (this[abort]) {
-      console.warn('Tasks abort.')
-      this[finish](false)
+      this[finish]()
       return false
     } else if (this.queue.length === 0) {
       return false
@@ -100,32 +102,25 @@ class TaskQueue {
     }
   }
 
-  [finish](flag) {
+  [finish]() {
     this.onHandle = false
     this.done = true
-    if (flag && this.__resolve && this.failed === 0) {
+    const flag = this.failed === 0
+    if (flag) {
       this.__resolve.call(this)
-    } else if (this.__reject) {
+    } else {
       this.__reject.call(this, this.errorStack)
-    }
-    if (this.onFinished) {
-      this.onFinished.call(this)
     }
   }
 
   abort() {
     this[abort] = true
   }
-
-  flush() {
-    this.queue = []
-    this.errorStack = []
-  }
 }
 
 class ParallelQueue extends TaskQueue {
-  constructor({ limit = 5, span = 300, toleration = 3, onFinished }) {
-    super({ onFinished })
+  constructor({ limit = 5, span = 300, toleration = 3 }) {
+    super()
     this.limitation = limit
     this.timespan = span
     this.toleration = toleration
@@ -184,8 +179,8 @@ class ParallelQueue extends TaskQueue {
 }
 
 class SerialQueue extends TaskQueue {
-  constructor({ abortAfterFail = false, toleration = 3, onFinished }) {
-    super({ onFinished })
+  constructor({ abortAfterFail = false, toleration = 3 }) {
+    super()
     this.abortAfterFail = abortAfterFail
     this.toleration = toleration
   }
@@ -204,11 +199,10 @@ class SerialQueue extends TaskQueue {
           if (task[retry] >= this.toleration) {
             // retried many times still failed
             this.failed += 1
+            this.errorStack.push(err)
             if (this.abortAfterFail) {
-              this[finish](false)
+              this[finish]()
               return false
-            } else {
-              this.errorStack.push(err)
             }
           } else {
             // failed but retry it
@@ -239,11 +233,6 @@ class SerialQueue extends TaskQueue {
 
   abort() {
     this[abort] = true
-  }
-
-  flush() {
-    this.queue = []
-    this.errorStack = []
   }
 }
 

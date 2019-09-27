@@ -3,7 +3,7 @@
 > asynchronous tasks execution manager  
 > **support ES6 only**
 
-### Usage
+## Usage
 
 `npm install --save async-task-manager`
 
@@ -36,6 +36,7 @@ queue.consume()
 
 Result look like this
 
+```bash
     Task 3 executed!
     Task 2 executed!
     Task 1 executed!
@@ -47,3 +48,4 @@ Result look like this
     Task 8 executed!
     Task 10 executed!
     finished
+```
