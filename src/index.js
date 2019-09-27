@@ -109,7 +109,7 @@ class TaskQueue {
     if (flag) {
       this.__resolve.call(this)
     } else {
-      this.__reject.call(this, this.errorStack)
+      this.__reject.call(this, new Error(`\n${'-'.repeat(30)}\n${this.errorStack.map(({ stack }, index) => `${index} - ${stack}\n`).join('-'.repeat(30) + '\n')}`))
     }
   }
 

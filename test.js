@@ -41,6 +41,7 @@ describe('Serial Queue', () => {
         )
       })
       return queue.consume().catch(err => {
+        console.error(err)
         return assert(queue.succeed === 8, 'Has 8 succeed result')
       })
     }
@@ -84,6 +85,7 @@ describe('Normal function task', () => {
         )
       })
       return queue.consume().catch(err => {
+        console.error(err)
         return assert(queue.succeed === 8, 'Has 8 succeed result')
       })
     }
