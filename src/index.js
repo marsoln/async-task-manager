@@ -131,25 +131,30 @@ class ParallelQueue extends TaskQueue {
       if (this.onExecAmount < this.limitation && this.queue.length > 0) {
         let task = this.queue.shift()
         this[execAmountChange](1)
-        task
-          .run()
-          .then(() => {
-            // exec success
+        try {
+          let result = task.run()
+          if (result.then) {
+            result.then(() => {
+              // exec success
+              this.succeed += 1
+              this[execAmountChange](-1)
+            })
+          } else {
             this.succeed += 1
             this[execAmountChange](-1)
-          })
-          .catch((err) => {
-            if (task[retry] >= this.toleration) {
-              // retried many times still failed
-              this.failed += 1
-              this.errorStack.push(err)
-            } else {
-              // failed but retry it
-              task[retry] += 1
-              this.queue.unshift(task)
-            }
-            this[execAmountChange](-1)
-          })
+          }
+        } catch (err) {
+          if (task[retry] >= this.toleration) {
+            // retried many times still failed
+            this.failed += 1
+            this.errorStack.push(err)
+          } else {
+            // failed but retry it
+            task[retry] += 1
+            this.queue.unshift(task)
+          }
+          this[execAmountChange](-1)
+        }
       }
       if (this.timespan > 0) {
         setTimeout(this[start].bind(this), this.timespan)
@@ -189,29 +194,36 @@ class SerialQueue extends TaskQueue {
     if (this[consumeValid]()) {
       this[execAmountChange](1)
       let task = this.queue.shift()
-      task.run()
-        .then(() => {
+      try {
+        let result = task.run()
+        if (result.then) {
+          result.then(() => {
+            this.succeed += 1
+            this[execAmountChange](-1)
+            this[start].call(this)
+          })
+        } else {
           this.succeed += 1
           this[execAmountChange](-1)
           this[start].call(this)
-        })
-        .catch((err) => {
-          if (task[retry] >= this.toleration) {
-            // retried many times still failed
-            this.failed += 1
-            this.errorStack.push(err)
-            if (this.abortAfterFail) {
-              this[finish]()
-              return false
-            }
-          } else {
-            // failed but retry it
-            task[retry] += 1
-            this.queue.unshift(task)
+        }
+      } catch (err) {
+        if (task[retry] >= this.toleration) {
+          // retried many times still failed
+          this.failed += 1
+          this.errorStack.push(err)
+          if (this.abortAfterFail) {
+            this[finish]()
+            return false
           }
-          this[execAmountChange](-1)
-          this[start].call(this)
-        })
+        } else {
+          // failed but retry it
+          task[retry] += 1
+          this.queue.unshift(task)
+        }
+        this[execAmountChange](-1)
+        this[start].call(this)
+      }
     }
   }
 
