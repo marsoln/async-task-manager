@@ -1,0 +1,23 @@
+# config files
+.vscode/
+.editorconfig
+conf.json
+.prettierrc
+
+# git files
+.git/
+.gitignore
+
+# binary files
+.bin/
+
+# eslint files
+.eslintrc
+.eslintignore
+
+# test files
+test/
+
+# npm files
+.npmignore
+node_modules/
