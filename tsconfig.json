@@ -1,0 +1,14 @@
+{
+  "include": ["index.ts"],
+  "compilerOptions": {
+    "lib": ["ES2015", "DOM"],
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": ".",
+    "sourceMap": true,
+    "declarationMap": true,
+    "resolveJsonModule": true,
+    "downlevelIteration": true
+  },
+  "exclude": ["node_modules"]
+}
