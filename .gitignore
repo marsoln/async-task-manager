@@ -6,3 +6,6 @@ node_modules/
 
 # Mac file
 .DS_STORE
+
+# dist files
+/dist/

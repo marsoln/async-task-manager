@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 
-const { TaskCapsule, ParallelQueue, SerialQueue } = require('../index')
+const { TaskCapsule, ParallelQueue, SerialQueue } = require('../dist/index')
 
 const randomMs = () => Math.random() * 100
 const emptyArr = new Array(10).fill('')
