@@ -2,25 +2,12 @@
 
 type CapsuleFunc = () => Promise<any>
 
-// #region Single Task Wrapper
-export class TaskCapsule {
-  exec: CapsuleFunc
-  retryCounter: number = 0
-
-  constructor(func: CapsuleFunc) {
-    this.exec = func
-  }
-
-  run() {
-    return this.exec()
-  }
-}
-// #endregion
+const retryCounter = Symbol('retryCounter')
 
 // #region Task Queues
 
 class TaskQueue {
-  queue: TaskCapsule[] = []
+  queue: CapsuleFunc[] = []
   errorStack: Error[] = [] // errors occured while processing
   _abortFlag: boolean = false // is abort
   _doneFlag = false // has done
@@ -28,7 +15,7 @@ class TaskQueue {
   total: number = 0
   succeed: number = 0
   failed: number = 0
-  exec: number = 0
+  executed: number = 0
 
   toleration: number = 0
 
@@ -43,19 +30,9 @@ class TaskQueue {
    * Add a task to the queue
    * @param {TaskCapsule|function} task Task to be executed
    */
-  add = (task: TaskCapsule | CapsuleFunc) => {
-    if (!(task instanceof TaskCapsule) && typeof task !== 'function') {
-      throw new TypeError(
-        "Task must be an instance of type - <TaskCapsule> or a function with a Promise as it's return value.",
-      )
-    }
-
-    if (task instanceof TaskCapsule) {
-      task.retryCounter = 0
-      this.queue.push(task)
-    } else {
-      this.queue.push(new TaskCapsule(task))
-    }
+  add = (task: CapsuleFunc) => {
+    task[retryCounter] = 0
+    this.queue.push(task)
   }
 
   __prepareToBegin = () => {
@@ -66,7 +43,7 @@ class TaskQueue {
       this.total = this.queue.length
       this.succeed = 0
       this.failed = 0
-      this.exec = 0
+      this.executed = 0
       this.errorStack = []
       return true
     }
@@ -74,15 +51,15 @@ class TaskQueue {
   }
 
   __execAmountChange = (num: number) => {
-    this.exec += num
-    if (this.exec <= 0 && this.queue.length === 0) {
+    this.executed += num
+    if (this.executed <= 0 && this.queue.length === 0) {
       this.__finish()
     }
   }
 
   __consumeValid() {
     if (this._doneFlag) {
-      if (this.exec > 0) {
+      if (this.executed > 0) {
         console.warn('Called consume after the tasks were handled.')
       }
       return false
@@ -130,23 +107,23 @@ export class ParallelQueue extends TaskQueue {
 
   __start = () => {
     if (this.__consumeValid()) {
-      if (this.exec < this.limitation && this.queue.length > 0) {
+      if (this.executed < this.limitation && this.queue.length > 0) {
         let task = this.queue.shift()
         this.__execAmountChange(1)
-        task.run().then(
+        task().then(
           () => {
             // exec success
             this.succeed += 1
             this.__execAmountChange(-1)
           },
           err => {
-            if (task.retryCounter >= this.toleration) {
+            if (task[retryCounter] >= this.toleration) {
               // retried many times still failed
               this.failed += 1
               this.errorStack.push(err)
             } else {
               // failed but retry it
-              task.retryCounter += 1
+              task[retryCounter] += 1
               this.queue.unshift(task)
             }
             this.__execAmountChange(-1)
@@ -197,14 +174,14 @@ export class SerialQueue extends TaskQueue {
     if (this.__consumeValid()) {
       this.__execAmountChange(1)
       let task = this.queue.shift()
-      task.run().then(
+      task().then(
         () => {
           this.succeed += 1
           this.__execAmountChange(-1)
           this.__start()
         },
         err => {
-          if (task.retryCounter >= this.toleration) {
+          if (task[retryCounter] >= this.toleration) {
             // retried many times still failed
             this.failed += 1
             this.errorStack.push(err)
@@ -214,7 +191,7 @@ export class SerialQueue extends TaskQueue {
             }
           } else {
             // failed but retry it
-            task.retryCounter += 1
+            task[retryCounter] += 1
             this.queue.unshift(task)
           }
           this.__execAmountChange(-1)
